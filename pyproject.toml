@@ -14,5 +14,9 @@ dependencies = [
     "fastapi>=0.104.1",
     "uvicorn>=0.24.0",
     "httpx>=0.25.2",
-    "openai"
+    "openai",
+    "openenv-core>=0.2.0"
 ]
+
+[project.scripts]
+server = "server.app:app"
