@@ -11,10 +11,13 @@ MODEL_NAME = os.environ.get("MODEL_NAME", "default-logistics-model")
 HF_TOKEN = os.environ.get("HF_TOKEN")
 LOCAL_IMAGE_NAME = os.environ.get("LOCAL_IMAGE_NAME")
 
+# Phase 2 explicit requirement:
+API_KEY = os.environ.get("API_KEY", HF_TOKEN)
+
 # Requirement: All LLM calls use the OpenAI client configured via these variables
 llm_client = OpenAI(
     base_url=API_BASE_URL,
-    api_key=HF_TOKEN if HF_TOKEN else "sk-no-token"
+    api_key=API_KEY if API_KEY else "sk-no-token"
 )
 
 ENV_URL = "http://localhost:8000"
@@ -66,8 +69,9 @@ def run_episode(seed: int = 42, difficulty: str = "easy"):
                     ]
                 )
                 action = json.loads(llm_response.choices[0].message.content)
-            except Exception:
-                # Fallback to heuristic if LLM evaluator endpoint is offline during local env testing
+            except json.JSONDecodeError:
+                # Fallback to heuristic ONLY if the LLM hallucinates an invalid JSON block (not for HTTP connection blockers). 
+                # This ensures any exact proxy failures crash visibly for the validator rather than silently falling back.
                 action = get_heuristic_action(state)
             
             step_count += 1
