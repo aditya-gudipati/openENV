@@ -5,22 +5,19 @@ import random
 import json
 from openai import OpenAI
 
-# OpenEnv configuration variables
+# The validator strictly injects these for the LiteLLM proxy
 API_BASE_URL = os.environ.get("API_BASE_URL", "http://localhost:8000")
+API_KEY = os.environ.get("API_KEY", "sk-dummy")
 MODEL_NAME = os.environ.get("MODEL_NAME", "default-logistics-model")
-HF_TOKEN = os.environ.get("HF_TOKEN")
-LOCAL_IMAGE_NAME = os.environ.get("LOCAL_IMAGE_NAME")
 
-# Phase 2 explicit requirement:
-API_KEY = os.environ.get("API_KEY", HF_TOKEN)
-
-# Requirement: All LLM calls use the OpenAI client configured via these variables
+# Requirement: All LLM calls use the OpenAI client configured exactly via these variables
 llm_client = OpenAI(
     base_url=API_BASE_URL,
-    api_key=API_KEY if API_KEY else "sk-no-token"
+    api_key=API_KEY
 )
 
-ENV_URL = "http://localhost:8000"
+# OpenEnv natively maps the actual game server app (Dockerfile) to port 7860
+ENV_URL = "http://127.0.0.1:7860"
 
 def get_heuristic_action(state):
     action = None
@@ -49,7 +46,7 @@ def run_episode(seed: int = 42, difficulty: str = "easy"):
             state = res.json()["state"]
         except Exception as e:
             print(f"[ERROR] Connection to Environment {ENV_URL} failed: {e}")
-            return
+            sys.exit(1) # CRITICAL: Hard crash here so validator knows we couldn't start, preventing silent 'Runs completed successfully' falsehoods.
             
         print(f"[STEP] 0 - Agent at {state['agent']['location']}")
         
