@@ -1,5 +1,6 @@
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
+import uvicorn
 from env import LogisticsEnv
 from models import Config, Action
 
@@ -36,3 +37,9 @@ async def get_state():
     if game.state is None:
         raise HTTPException(status_code=400, detail="Environment not initialized. Call /reset first.")
     return {"state": game._read_state()}
+
+def main():
+    uvicorn.run(app, host="0.0.0.0", port=7860)
+
+if __name__ == "__main__":
+    main()
