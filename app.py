@@ -1,7 +1,7 @@
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
-from src.env import LogisticsEnv
-from src.models import Config, Action
+from env import LogisticsEnv
+from models import Config, Action
 
 app = FastAPI(title="OpenEnv Logistics Engine")
 

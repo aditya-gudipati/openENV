@@ -1,11 +1,11 @@
 import random
 from typing import Tuple
 
-from src.models import (
+from models import (
     WorldState, Action, ActionType, PackageState, Priority, Edge, Config
 )
-from src.grader import TaskGrader
-from src.tasks.generators import Generator
+from grader import TaskGrader
+from generators import Generator
 
 class LogisticsEnv:
     def __init__(self, config: Config):

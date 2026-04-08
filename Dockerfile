@@ -14,10 +14,8 @@ COPY --chown=user requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy source configuration
-COPY --chown=user src/ /app/src/
-COPY --chown=user app.py /app/app.py
+COPY --chown=user *.py /app/
 COPY --chown=user openenv.yaml /app/openenv.yaml
-COPY --chown=user inference.py /app/inference.py
 
 # Expose validation mapping port strictly assigned universally by HF Spaces
 EXPOSE 7860

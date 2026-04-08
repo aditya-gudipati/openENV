@@ -1,4 +1,4 @@
-from src.models import WorldState, AgentState, Package, Edge, Priority, PackageState
+from models import WorldState, AgentState, Package, Edge, Priority, PackageState
 
 class Generator:
     @staticmethod
