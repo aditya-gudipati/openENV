@@ -49,23 +49,39 @@ class DeliveryTaskGrader:
     """ Evaluates the base delivery completion task. """
     @staticmethod
     def grade(state: WorldState) -> float:
-        tot, dev, _, _ = _get_delivery_stats(state)
-        if tot == 0:
-            return _clamp_score(0.5)  # Default middle score if no packages
-        # Calculate delivery ratio
-        score = float(dev) / float(tot)
-        return _clamp_score(score)
+        try:
+            tot, dev, _, _ = _get_delivery_stats(state)
+            if tot == 0:
+                result = _clamp_score(0.5)  # Default middle score if no packages
+            else:
+                # Calculate delivery ratio
+                score = float(dev) / float(tot)
+                result = _clamp_score(score)
+            # Final validation - must be strictly in (0, 1)
+            if not (0 < result < 1):
+                return 0.5
+            return result
+        except Exception:
+            return _clamp_score(0.5)
 
 class PriorityTaskGrader:
     """ Evaluates the urgent package SLA compliance task. """
     @staticmethod
     def grade(state: WorldState) -> float:
-        _, _, urg_tot, urg_dev = _get_delivery_stats(state)
-        if urg_tot == 0:
-            return _clamp_score(0.5)  # Default middle score if no urgent packages
-        # Calculate urgent package on-time delivery ratio
-        score = float(urg_dev) / float(urg_tot)
-        return _clamp_score(score)
+        try:
+            _, _, urg_tot, urg_dev = _get_delivery_stats(state)
+            if urg_tot == 0:
+                result = _clamp_score(0.5)  # Default middle score if no urgent packages
+            else:
+                # Calculate urgent package on-time delivery ratio
+                score = float(urg_dev) / float(urg_tot)
+                result = _clamp_score(score)
+            # Final validation - must be strictly in (0, 1)
+            if not (0 < result < 1):
+                return 0.5
+            return result
+        except Exception:
+            return _clamp_score(0.5)
 
 class FuelTaskGrader:
     """ Evaluates the fuel efficiency task explicitly strictly within constraints. """
