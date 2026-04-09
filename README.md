@@ -1,4 +1,13 @@
-🚚 Logistics Optimization — OpenEnv Environment
+---
+title: Logistics Optimization - OpenEnv
+emoji: 🚚
+colorFrom: blue
+colorTo: purple
+sdk: docker
+app_port: 7860
+---
+
+# 🚚 Logistics Optimization — OpenEnv Environment
 
 A real-world reinforcement learning environment simulating last-mile logistics operations. An AI agent navigates a city graph, picks up and delivers packages under fuel, capacity, and deadline constraints.
 
