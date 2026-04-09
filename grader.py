@@ -3,28 +3,40 @@ from models import WorldState, Priority, PackageState
 def _clamp_score(value: float, min_val: float = 0.01, max_val: float = 0.99) -> float:
     """Clamp a score value to be strictly within (0, 1).
     Guarantees: 0 < result < 1 (never exactly 0.0 or 1.0).
+    Uses PARANOID multi-layer validation.
     """
-    # Ensure we have a valid float
+    # Layer 1: Type coercion with safety
     try:
         val = float(value)
-    except (ValueError, TypeError):
+    except (ValueError, TypeError, AttributeError):
         return 0.5
     
-    # Handle special cases first - check for boundary values explicitly
+    # Layer 2: Handle special float values explicitly
     if val != val:  # NaN check
         return 0.5
-    if val == float('inf') or val >= 1.0:
-        return max_val  # Return 0.99, not 1.0
-    if val == float('-inf') or val <= 0.0:
-        return min_val  # Return 0.01, not 0.0
+    if val == float('inf'):
+        return max_val
+    if val == float('-inf'):
+        return min_val
     
-    # Clamp to safe range [0.01, 0.99]
+    # Layer 3: Bounce boundary values to safe zone
+    if val >= 1.0:
+        return min(max_val, 0.98)  # Safe distance from 1.0
+    if val <= 0.0:
+        return max(min_val, 0.02)  # Safe distance from 0.0
+    
+    # Layer 4: Standard clamping
     clamped = min(max(val, min_val), max_val)
     
-    # CRITICAL: Final safety check - ensure strictly bounded
+    # Layer 5: Paranoid final boundary check
     if clamped <= 0.0 or clamped >= 1.0:
         return 0.5
     if not (0 < clamped < 1):
+        return 0.5
+    
+    # Layer 6: Additional epsilon check for near-boundary values
+    epsilon = 1e-9
+    if abs(clamped - 0.0) < epsilon or abs(clamped - 1.0) < epsilon:
         return 0.5
     
     return clamped
@@ -55,13 +67,20 @@ class DeliveryTaskGrader:
                 result = _clamp_score(0.5)  # Default middle score if no packages
             else:
                 # Calculate delivery ratio
-                score = float(dev) / float(tot)
+                dev_float = float(dev)
+                tot_float = float(tot)
+                if tot_float == 0:
+                    score = 0.5
+                else:
+                    score = dev_float / tot_float
+                # Paranoid: ensure ratio is in [0, 1] before clamping
+                score = max(0.0, min(1.0, score))
                 result = _clamp_score(score)
             # Final validation - must be strictly in (0, 1)
             if not (0 < result < 1):
                 return 0.5
             return result
-        except Exception:
+        except Exception as e:
             return _clamp_score(0.5)
 
 class PriorityTaskGrader:
@@ -74,13 +93,20 @@ class PriorityTaskGrader:
                 result = _clamp_score(0.5)  # Default middle score if no urgent packages
             else:
                 # Calculate urgent package on-time delivery ratio
-                score = float(urg_dev) / float(urg_tot)
+                urg_dev_float = float(urg_dev)
+                urg_tot_float = float(urg_tot)
+                if urg_tot_float == 0:
+                    score = 0.5
+                else:
+                    score = urg_dev_float / urg_tot_float
+                # Paranoid: ensure ratio is in [0, 1] before clamping
+                score = max(0.0, min(1.0, score))
                 result = _clamp_score(score)
             # Final validation - must be strictly in (0, 1)
             if not (0 < result < 1):
                 return 0.5
             return result
-        except Exception:
+        except Exception as e:
             return _clamp_score(0.5)
 
 class FuelTaskGrader:
@@ -96,14 +122,63 @@ class FuelTaskGrader:
                 result = _clamp_score(0.5)
             else:
                 # Calculate efficiency as fuel remaining normalized to max
+                fuel = max(0.0, fuel)  # Ensure non-negative
                 efficiency = fuel / max_fuel
+                # Paranoid: ensure ratio is in [0, 1] before clamping
+                efficiency = max(0.0, min(1.0, efficiency))
                 result = _clamp_score(efficiency)
             
             # Final validation - must be strictly in (0, 1)
             if not (0 < result < 1):
                 return 0.5
             return result
-        except (ValueError, TypeError, ZeroDivisionError):
+        except (ValueError, TypeError, ZeroDivisionError, AttributeError):
+            return _clamp_score(0.5)
+
+class ServiceReliabilityTaskGrader:
+    """ Evaluates service reliability through time utilization and responsiveness. """
+    @staticmethod
+    def grade(state: WorldState) -> float:
+        """
+        Measures service reliability: how efficiently the agent uses time.
+        Combines: (1) Time spent in productive actions, (2) Response time to pickups.
+        """
+        try:
+            # Get agent stats
+            current_time = float(getattr(state.agent, 'time', 0.0))
+            max_time = float(getattr(state.agent, 'max_time', 100.0))
+            
+            # Count delivered packages and pending packages
+            total_packages = len(state.packages)
+            delivered_count = sum(1 for pkg in state.packages.values() 
+                                if pkg.state == PackageState.DELIVERED)
+            
+            if max_time <= 0 or total_packages == 0:
+                result = _clamp_score(0.5)
+                return result if (0 < result < 1) else 0.5
+            
+            # Calculate time efficiency (how much of available time was used productively)
+            time_remaining = max(0.0, max_time - current_time)
+            time_used = max(0.0, current_time)
+            time_efficiency = min(1.0, time_used / max_time) if max_time > 0 else 0.5
+            
+            # Calculate delivery responsiveness
+            delivery_ratio = float(delivered_count) / float(total_packages)
+            
+            # Combined reliability score: weighted average
+            # Weight: 60% on delivery efficiency, 40% on time utilization
+            reliability_score = (0.6 * delivery_ratio) + (0.4 * time_efficiency)
+            # Paranoid: ensure combined score is in [0, 1] before clamping
+            reliability_score = max(0.0, min(1.0, reliability_score))
+            
+            result = _clamp_score(reliability_score)
+            
+            # Final validation - must be strictly in (0, 1)
+            if not (0 < result < 1):
+                return 0.5
+            return result
+            
+        except (ValueError, TypeError, ZeroDivisionError, AttributeError):
             return _clamp_score(0.5)
 
 class TaskGrader:
@@ -135,5 +210,10 @@ TASKS = {
         "name": "fuel_efficiency",
         "description": "Fuel Efficiency - Optimize fuel consumption.",
         "grader": FuelTaskGrader
+    },
+    "service_reliability": {
+        "name": "service_reliability",
+        "description": "Service Reliability - Measure time utilization and responsiveness in fulfilling orders.",
+        "grader": ServiceReliabilityTaskGrader
     }
 }
