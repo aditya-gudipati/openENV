@@ -13,12 +13,27 @@ endpoints:
   reset:
     path: "/reset"
     method: "POST"
+    description: "Reset environment to initial state"
   step:
     path: "/step"
     method: "POST"
+    description: "Execute one action step in the environment"
   read_state:
     path: "/state"
     method: "GET"
+    description: "Get current environment state"
+  metadata:
+    path: "/metadata"
+    method: "GET"
+    description: "Get environment and task metadata"
+  grades:
+    path: "/grades"
+    method: "GET"
+    description: "Get all task grades"
+  tasks:
+    path: "/tasks"
+    method: "GET"
+    description: "List all available tasks"
 
 obs_space:
   type: "dict"
@@ -31,16 +46,31 @@ action_space:
     target: "string (optional)"
 
 tasks:
-  - name: "delivery_completion"
+  - id: "delivery_completion"
+    name: "delivery_completion"
     description: "Delivery Completion - Maximize the fraction of packages delivered."
+    type: "maximization"
+    grader: "DeliveryTaskGrader"
     grader_endpoint: "/task/delivery_grade"
-  - name: "priority_sla"
+    score_range: [0, 1]
+  - id: "priority_sla"
+    name: "priority_sla"
     description: "Priority SLA Compliance - Maximize on-time delivery of urgent packages."
+    type: "maximization"
+    grader: "PriorityTaskGrader"
     grader_endpoint: "/task/priority_grade"
-  - name: "fuel_efficiency"
+    score_range: [0, 1]
+  - id: "fuel_efficiency"
+    name: "fuel_efficiency"
     description: "Fuel Efficiency - Optimize fuel consumption."
+    type: "maximization"
+    grader: "FuelTaskGrader"
     grader_endpoint: "/task/fuel_grade"
+    score_range: [0, 1]
 
 metadata:
   deterministic: true
   supports_seeds: true
+  num_tasks: 3
+  task_scoring_type: "strict_open_interval"
+  score_bounds: "(0, 1)"
