@@ -1,27 +1,30 @@
 from models import WorldState, Priority, PackageState
 
 def _clamp_score(value: float, min_val: float = 0.01, max_val: float = 0.99) -> float:
-    """Clamp a score value to be strictly within (0, 1)."""
+    """Clamp a score value to be strictly within (0, 1).
+    Guarantees: 0 < result < 1 (never exactly 0.0 or 1.0).
+    """
     # Ensure we have a valid float
     try:
         val = float(value)
     except (ValueError, TypeError):
         return 0.5
     
-    # Handle special values
+    # Handle special cases first - check for boundary values explicitly
     if val != val:  # NaN check
         return 0.5
-    if val == float('inf'):
-        return max_val
-    if val == float('-inf'):
-        return min_val
+    if val == float('inf') or val >= 1.0:
+        return max_val  # Return 0.99, not 1.0
+    if val == float('-inf') or val <= 0.0:
+        return min_val  # Return 0.01, not 0.0
     
-    # Clamp to range with slight buffer away from boundaries
+    # Clamp to safe range [0.01, 0.99]
     clamped = min(max(val, min_val), max_val)
     
-    # Final safety check - ensure strictly within (0, 1)
+    # CRITICAL: Final safety check - ensure strictly bounded
+    if clamped <= 0.0 or clamped >= 1.0:
+        return 0.5
     if not (0 < clamped < 1):
-        # If still at boundary, use middle value
         return 0.5
     
     return clamped

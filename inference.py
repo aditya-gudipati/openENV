@@ -91,6 +91,58 @@ def run_episode(seed: int = 42, difficulty: str = "easy"):
         print(f"\n[END] Episode terminated.")
         print(f"      Total Dense Reward: {cumulative_reward:.2f}")
         print(f"      Final Grader Score: {final_score}")
+        
+        # CRITICAL: Validate all task graders return scores in (0, 1)
+        print(f"\n[VALIDATION] Testing all task graders...")
+        try:
+            grader_results = {}
+            valid_count = 0
+            
+            # Test delivery grader
+            try:
+                res = client.get("/task/delivery_grade")
+                if res.status_code == 200:
+                    delivery_score = float(res.json()["score"])
+                    grader_results["delivery_completion"] = delivery_score
+                    is_valid = 0 < delivery_score < 1
+                    print(f"[GRADE] delivery_completion: {delivery_score:.4f}", end="")
+                    print(" ✓" if is_valid else " ✗ (OUT OF RANGE)")
+                    if is_valid:
+                        valid_count += 1
+            except Exception as e:
+                print(f"[GRADE] delivery_completion: ERROR - {e}")
+            
+            # Test priority grader
+            try:
+                res = client.get("/task/priority_grade")
+                if res.status_code == 200:
+                    priority_score = float(res.json()["score"])
+                    grader_results["priority_sla"] = priority_score
+                    is_valid = 0 < priority_score < 1
+                    print(f"[GRADE] priority_sla: {priority_score:.4f}", end="")
+                    print(" ✓" if is_valid else " ✗ (OUT OF RANGE)")
+                    if is_valid:
+                        valid_count += 1
+            except Exception as e:
+                print(f"[GRADE] priority_sla: ERROR - {e}")
+            
+            # Test fuel grader
+            try:
+                res = client.get("/task/fuel_grade")
+                if res.status_code == 200:
+                    fuel_score = float(res.json()["score"])
+                    grader_results["fuel_efficiency"] = fuel_score
+                    is_valid = 0 < fuel_score < 1
+                    print(f"[GRADE] fuel_efficiency: {fuel_score:.4f}", end="")
+                    print(" ✓" if is_valid else " ✗ (OUT OF RANGE)")
+                    if is_valid:
+                        valid_count += 1
+            except Exception as e:
+                print(f"[GRADE] fuel_efficiency: ERROR - {e}")
+            
+            print(f"[INFO] Graders tested: {valid_count}/3 returned valid scores (0, 1)")
+        except Exception as e:
+            print(f"[WARN] Could not test graders: {e}")
 
 if __name__ == "__main__":
     difficulty_pref = sys.argv[1] if len(sys.argv) > 1 else "easy"
