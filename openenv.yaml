@@ -53,6 +53,7 @@ tasks:
     grader: "DeliveryTaskGrader"
     grader_endpoint: "/task/delivery_grade"
     score_range: [0, 1]
+
   - id: "priority_sla"
     name: "priority_sla"
     description: "Priority SLA Compliance - Maximize on-time delivery of urgent packages."
@@ -60,6 +61,7 @@ tasks:
     grader: "PriorityTaskGrader"
     grader_endpoint: "/task/priority_grade"
     score_range: [0, 1]
+
   - id: "fuel_efficiency"
     name: "fuel_efficiency"
     description: "Fuel Efficiency - Optimize fuel consumption."

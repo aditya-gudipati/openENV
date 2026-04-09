@@ -21,19 +21,21 @@ class StepRequest(BaseModel):
 
 @app.get("/tasks")
 async def list_tasks():
-    """List all available tasks and their graders."""
     return {
         "tasks": [
             {
+                "id": task["name"],
                 "name": task["name"],
                 "description": task["description"],
                 "grader": task["grader"].__name__,
                 "has_grader": True,
-                "grader_endpoint": f"/task/{task['name']}_grade"
+                "grader_endpoint": f"/task/{task['name']}_grade",
+                "score_range": [0, 1]
             }
             for task in TASKS.values()
+            if task["name"] in ("delivery_completion", "priority_sla", "fuel_efficiency")
         ],
-        "num_tasks": len(TASKS)
+        "num_tasks": 3
     }
 
 @app.get("/metadata")
