@@ -4,7 +4,7 @@ from typing import Tuple
 from models import (
     WorldState, Action, ActionType, PackageState, Priority, Edge, Config
 )
-from grader import TaskGrader
+from grader import TaskGrader, DeliveryTaskGrader, PriorityTaskGrader, FuelTaskGrader
 from generators import Generator
 
 class LogisticsEnv:
@@ -54,6 +54,11 @@ class LogisticsEnv:
         info = {}
         if self.state.is_terminal:
              info["score"] = TaskGrader.grade(self.state)
+             info["tasks"] = {
+                 "delivery_completion": DeliveryTaskGrader.grade(self.state),
+                 "priority_sla": PriorityTaskGrader.grade(self.state),
+                 "fuel_efficiency": FuelTaskGrader.grade(self.state)
+             }
              
         # End loop
         return self._read_state(), reward, self.state.is_terminal, info

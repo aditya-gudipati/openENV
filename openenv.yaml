@@ -30,6 +30,17 @@ action_space:
     action_type: ["move", "pickup", "deliver", "wait"]
     target: "string (optional)"
 
+tasks:
+  - name: "delivery_completion"
+    description: "Delivery Completion - Maximize the fraction of packages delivered."
+    grader_endpoint: "/task/delivery_grade"
+  - name: "priority_sla"
+    description: "Priority SLA Compliance - Maximize on-time delivery of urgent packages."
+    grader_endpoint: "/task/priority_grade"
+  - name: "fuel_efficiency"
+    description: "Fuel Efficiency - Optimize fuel consumption."
+    grader_endpoint: "/task/fuel_grade"
+
 metadata:
   deterministic: true
   supports_seeds: true
