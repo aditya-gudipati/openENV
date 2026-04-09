@@ -33,3 +33,20 @@ action_space:
 metadata:
   deterministic: true
   supports_seeds: true
+
+tasks:
+  - id: "delivery_rate"
+    name: "Overall Delivery Rate"
+    description: "Fraction of packages successfully delivered"
+    difficulty: "easy"
+    grader: "grader:grade_delivery"
+  - id: "priority_accuracy"
+    name: "Urgent Deadline Accuracy"
+    description: "Fraction of urgent packages delivered on time"
+    difficulty: "medium"
+    grader: "grader:grade_priority"
+  - id: "fuel_efficiency"
+    name: "Fuel Efficiency"
+    description: "Remaining fuel relative to maximum capacity"
+    difficulty: "hard"
+    grader: "grader:grade_fuel"
