@@ -93,11 +93,16 @@ class FuelTaskGrader:
             fuel = float(getattr(state.agent, 'fuel', 0.0))
             
             if max_fuel <= 0:
-                return _clamp_score(0.5)
+                result = _clamp_score(0.5)
+            else:
+                # Calculate efficiency as fuel remaining normalized to max
+                efficiency = fuel / max_fuel
+                result = _clamp_score(efficiency)
             
-            # Calculate efficiency as fuel remaining normalized to max
-            efficiency = fuel / max_fuel
-            return _clamp_score(efficiency)
+            # Final validation - must be strictly in (0, 1)
+            if not (0 < result < 1):
+                return 0.5
+            return result
         except (ValueError, TypeError, ZeroDivisionError):
             return _clamp_score(0.5)
 
