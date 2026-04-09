@@ -35,6 +35,7 @@ class Package(BaseModel):
 class AgentState(BaseModel):
     location: str
     fuel: float
+    max_fuel: float = 1000.0
     capacity: float
     max_capacity: float
     time: int

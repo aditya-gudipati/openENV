@@ -18,6 +18,7 @@ class Generator:
         
         deadlines = 30 if difficulty in ["medium", "hard"] else 9999
         fuel = 1000.0 if difficulty == "easy" else 50.0  # More constrained fuel
+        max_fuel = fuel  # max_fuel matches initial fuel
         
         # Deterministic generation logic per difficulty
         packages["p1"] = Package(
@@ -33,7 +34,7 @@ class Generator:
         )
         
         agent = AgentState(
-            location="Depot", fuel=fuel, capacity=10.0, max_capacity=10.0, time=0
+            location="Depot", fuel=fuel, max_fuel=max_fuel, capacity=10.0, max_capacity=10.0, time=0
         )
         
         return WorldState(

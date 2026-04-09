@@ -9,7 +9,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from env import LogisticsEnv
 from models import Config, Action
-from grader import DeliveryTaskGrader, PriorityTaskGrader, FuelTaskGrader
+from grader import DeliveryTaskGrader, PriorityTaskGrader, FuelTaskGrader, TASKS
 
 app = FastAPI(title="OpenEnv Logistics Engine")
 
@@ -18,6 +18,20 @@ game = LogisticsEnv(Config())
 
 class StepRequest(BaseModel):
     action: Action
+
+@app.get("/tasks")
+async def list_tasks():
+    """List all available tasks and their graders."""
+    return {
+        "tasks": [
+            {
+                "name": task["name"],
+                "description": task["description"],
+                "grader_endpoint": f"/task/{task['name']}_grade"
+            }
+            for task in TASKS.values()
+        ]
+    }
 
 @app.post("/reset")
 async def reset(seed: int = 42, difficulty: str = "medium"):

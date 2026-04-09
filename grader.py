@@ -21,27 +21,57 @@ class DeliveryTaskGrader:
     @staticmethod
     def grade(state: WorldState) -> float:
         tot, dev, _, _ = _get_delivery_stats(state)
-        if tot == 0: return 0.999
-        return min(max(float(dev / tot), 0.001), 0.999)
+        if tot == 0:
+            return 0.5  # Default middle score if no packages
+        # Ensure strictly within (0, 1)
+        score = float(dev / tot)
+        return min(max(score, 0.01), 0.99)
 
 class PriorityTaskGrader:
     """ Evaluates the urgent package SLA compliance task. """
     @staticmethod
     def grade(state: WorldState) -> float:
         _, _, urg_tot, urg_dev = _get_delivery_stats(state)
-        if urg_tot == 0: return 0.999
-        return min(max(float(urg_dev / urg_tot), 0.001), 0.999)
+        if urg_tot == 0:
+            return 0.5  # Default middle score if no urgent packages
+        # Ensure strictly within (0, 1)
+        score = float(urg_dev / urg_tot)
+        return min(max(score, 0.01), 0.99)
 
 class FuelTaskGrader:
     """ Evaluates the fuel efficiency task explicitly strictly within constraints. """
     @staticmethod
     def grade(state: WorldState) -> float:
+        # Fuel efficiency: normalized fuel remaining
+        max_fuel = getattr(state.agent, 'max_fuel', 1000.0)
         fuel = getattr(state.agent, 'fuel', 0.0)
-        val = float(fuel / max(1.0, fuel)) if fuel > 0 else 0.0
-        return min(max(val, 0.001), 0.999)
+        if max_fuel <= 0:
+            return 0.5
+        # Ensure score is strictly within (0, 1)
+        efficiency = fuel / max_fuel
+        return min(max(efficiency, 0.01), 0.99)
 
 class TaskGrader:
     """ Legacy overall composite evaluator for local physics engine fallback. """
     @staticmethod
     def grade(state: WorldState) -> float:
         return (DeliveryTaskGrader.grade(state) + PriorityTaskGrader.grade(state) + FuelTaskGrader.grade(state)) / 3.0
+
+# Task Registry - exposed for validator discovery
+TASKS = {
+    "delivery_completion": {
+        "name": "delivery_completion",
+        "description": "Delivery Completion - Maximize the fraction of packages delivered.",
+        "grader": DeliveryTaskGrader
+    },
+    "priority_sla": {
+        "name": "priority_sla",
+        "description": "Priority SLA Compliance - Maximize on-time delivery of urgent packages.",
+        "grader": PriorityTaskGrader
+    },
+    "fuel_efficiency": {
+        "name": "fuel_efficiency",
+        "description": "Fuel Efficiency - Optimize fuel consumption.",
+        "grader": FuelTaskGrader
+    }
+}
