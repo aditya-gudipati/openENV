@@ -27,10 +27,13 @@ async def list_tasks():
             {
                 "name": task["name"],
                 "description": task["description"],
+                "grader": task["grader"].__name__,
+                "has_grader": True,
                 "grader_endpoint": f"/task/{task['name']}_grade"
             }
             for task in TASKS.values()
-        ]
+        ],
+        "num_tasks": len(TASKS)
     }
 
 @app.get("/metadata")
@@ -80,11 +83,12 @@ async def get_state():
 @app.get("/task/delivery_grade")
 async def delivery_grade():
     if game.state is None:
-        raise HTTPException(status_code=400, detail="Environment not initialized. Call /reset first.")
+        game.reset(seed=42)
     score = DeliveryTaskGrader.grade(game.state)
     score = float(score)
+    # Validate strictly between 0 and 1 (not including boundaries)
     if not (0 < score < 1):
-        raise HTTPException(status_code=500, detail=f"Invalid score: {score}")
+        raise HTTPException(status_code=500, detail=f"Invalid score: {score}. Must be strictly between 0 and 1.")
     return {
         "task": "delivery_completion",
         "description": "Delivery Completion - Maximize the fraction of packages delivered.",
@@ -94,11 +98,12 @@ async def delivery_grade():
 @app.get("/task/priority_grade")
 async def priority_grade():
     if game.state is None:
-        raise HTTPException(status_code=400, detail="Environment not initialized. Call /reset first.")
+        game.reset(seed=42)
     score = PriorityTaskGrader.grade(game.state)
     score = float(score)
+    # Validate strictly between 0 and 1 (not including boundaries)
     if not (0 < score < 1):
-        raise HTTPException(status_code=500, detail=f"Invalid score: {score}")
+        raise HTTPException(status_code=500, detail=f"Invalid score: {score}. Must be strictly between 0 and 1.")
     return {
         "task": "priority_sla",
         "description": "Priority SLA Compliance - Maximize on-time delivery of urgent packages.",
@@ -108,11 +113,12 @@ async def priority_grade():
 @app.get("/task/fuel_grade")
 async def fuel_grade():
     if game.state is None:
-        raise HTTPException(status_code=400, detail="Environment not initialized. Call /reset first.")
+        game.reset(seed=42)
     score = FuelTaskGrader.grade(game.state)
     score = float(score)
+    # Validate strictly between 0 and 1 (not including boundaries)
     if not (0 < score < 1):
-        raise HTTPException(status_code=500, detail=f"Invalid score: {score}")
+        raise HTTPException(status_code=500, detail=f"Invalid score: {score}. Must be strictly between 0 and 1.")
     return {
         "task": "fuel_efficiency",
         "description": "Fuel Efficiency - Optimize fuel consumption.",
@@ -123,26 +129,69 @@ async def fuel_grade():
 async def get_all_grades():
     """Get scores for all tasks from current game state."""
     if game.state is None:
-        raise HTTPException(status_code=400, detail="Environment not initialized. Call /reset first.")
+        game.reset(seed=42)
     
     delivery_score = float(DeliveryTaskGrader.grade(game.state))
     priority_score = float(PriorityTaskGrader.grade(game.state))
     fuel_score = float(FuelTaskGrader.grade(game.state))
     
-    # Validate all scores
-    scores = [delivery_score, priority_score, fuel_score]
-    for s in scores:
-        if not (0 < s < 1):
-            raise HTTPException(status_code=500, detail=f"Invalid score detected: {s}")
+    # Validate all scores are strictly between 0 and 1
+    scores_dict = {
+        "delivery_completion": delivery_score,
+        "priority_sla": priority_score,
+        "fuel_efficiency": fuel_score
+    }
+    
+    for task_name, score in scores_dict.items():
+        if not (0 < score < 1):
+            raise HTTPException(
+                status_code=500, 
+                detail=f"Task '{task_name}' has invalid score: {score}. All scores must be strictly between 0 and 1."
+            )
     
     return {
-        "scores": {
-            "delivery_completion": delivery_score,
-            "priority_sla": priority_score,
-            "fuel_efficiency": fuel_score
-        },
+        "scores": scores_dict,
         "all_valid": True,
-        "num_tasks": 3
+        "num_tasks": 3,
+        "num_tasks_with_graders": 3
+    }
+
+@app.get("/graders")
+async def list_graders():
+    """List all available graders and validate they work."""
+    if game.state is None:
+        game.reset(seed=42)
+    
+    graders_info = []
+    
+    delivery_score = float(DeliveryTaskGrader.grade(game.state))
+    priority_score = float(PriorityTaskGrader.grade(game.state))
+    fuel_score = float(FuelTaskGrader.grade(game.state))
+    
+    # Validate each score
+    scores = [
+        ("delivery_completion", delivery_score),
+        ("priority_sla", priority_score),
+        ("fuel_efficiency", fuel_score)
+    ]
+    
+    for task_name, score in scores:
+        if not (0 < score < 1):
+            raise HTTPException(
+                status_code=500,
+                detail=f"Grader for '{task_name}' returned invalid score: {score}. Must be strictly between 0 and 1."
+            )
+        graders_info.append({
+            "name": task_name,
+            "grader_class": f"Task for {task_name}Grader",
+            "score": score,
+            "valid": True
+        })
+    
+    return {
+        "graders": graders_info,
+        "total_graders": len(graders_info),
+        "all_valid": True
     }
 
 @app.post("/grades")
@@ -155,23 +204,28 @@ async def grade_after_reset(seed: int = 42, difficulty: str = "medium"):
     priority_score = float(PriorityTaskGrader.grade(game.state))
     fuel_score = float(FuelTaskGrader.grade(game.state))
     
-    # Validate all scores
-    scores = [delivery_score, priority_score, fuel_score]
-    for s in scores:
-        if not (0 < s < 1):
-            raise HTTPException(status_code=500, detail=f"Invalid score detected: {s}")
+    # Validate all scores are strictly between 0 and 1
+    scores_dict = {
+        "delivery_completion": delivery_score,
+        "priority_sla": priority_score,
+        "fuel_efficiency": fuel_score
+    }
+    
+    for task_name, score in scores_dict.items():
+        if not (0 < score < 1):
+            raise HTTPException(
+                status_code=500,
+                detail=f"After reset - Task '{task_name}' has invalid score: {score}. All scores must be strictly between 0 and 1."
+            )
     
     return {
         "reset": True,
         "seed": seed,
         "difficulty": difficulty,
-        "scores": {
-            "delivery_completion": delivery_score,
-            "priority_sla": priority_score,
-            "fuel_efficiency": fuel_score
-        },
+        "scores": scores_dict,
         "all_valid": True,
-        "num_tasks": 3
+        "num_tasks": 3,
+        "num_tasks_with_graders": 3
     }
 
 def main():

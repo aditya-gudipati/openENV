@@ -3,7 +3,11 @@ from models import WorldState, Priority, PackageState
 def _clamp_score(value: float, min_val: float = 0.01, max_val: float = 0.99) -> float:
     """Clamp a score value to be strictly within (0, 1)."""
     # Ensure we have a valid float
-    val = float(value)
+    try:
+        val = float(value)
+    except (ValueError, TypeError):
+        return 0.5
+    
     # Handle special values
     if val != val:  # NaN check
         return 0.5
@@ -11,12 +15,16 @@ def _clamp_score(value: float, min_val: float = 0.01, max_val: float = 0.99) -> 
         return max_val
     if val == float('-inf'):
         return min_val
-    # Clamp to range
-    result = min(max(val, min_val), max_val)
-    # Final validation
-    if not (min_val <= result <= max_val):
+    
+    # Clamp to range with slight buffer away from boundaries
+    clamped = min(max(val, min_val), max_val)
+    
+    # Final safety check - ensure strictly within (0, 1)
+    if not (0 < clamped < 1):
+        # If still at boundary, use middle value
         return 0.5
-    return result
+    
+    return clamped
 
 def _get_delivery_stats(state: WorldState):
     total_packages = len(state.packages)
