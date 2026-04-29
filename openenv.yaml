@@ -1,0 +1,78 @@
+name: "Autonomous Logistics Intelligence Environment"
+version: "1.0.0"
+description: "An OpenEnv-compliant RL environment orchestrating deterministic real-world constrained logistics simulations."
+repository: "openenv-logistics"
+
+server:
+  host: "0.0.0.0"
+  port: 8000
+  framework: "fastapi"
+  startup_command: "uvicorn app:app --host 0.0.0.0 --port 8000"
+
+endpoints:
+  reset:
+    path: "/reset"
+    method: "POST"
+    description: "Reset environment to initial state"
+  step:
+    path: "/step"
+    method: "POST"
+    description: "Execute one action step in the environment"
+  read_state:
+    path: "/state"
+    method: "GET"
+    description: "Get current environment state"
+  metadata:
+    path: "/metadata"
+    method: "GET"
+    description: "Get environment and task metadata"
+  grades:
+    path: "/grades"
+    method: "GET"
+    description: "Get all task grades"
+  tasks:
+    path: "/tasks"
+    method: "GET"
+    description: "List all available tasks"
+
+obs_space:
+  type: "dict"
+  description: "Serialized JSON graph representation containing edges, nodes, package lists and priorities."
+
+action_space:
+  type: "dict"
+  schema:
+    action_type: ["move", "pickup", "deliver", "wait"]
+    target: "string (optional)"
+
+tasks:
+  - id: "delivery_completion"
+    name: "delivery_completion"
+    description: "Delivery Completion - Maximize the fraction of packages delivered."
+    type: "maximization"
+    grader: "DeliveryTaskGrader"
+    grader_endpoint: "/task/delivery_grade"
+    score_range: [0, 1]
+
+  - id: "priority_sla"
+    name: "priority_sla"
+    description: "Priority SLA Compliance - Maximize on-time delivery of urgent packages."
+    type: "maximization"
+    grader: "PriorityTaskGrader"
+    grader_endpoint: "/task/priority_grade"
+    score_range: [0, 1]
+
+  - id: "fuel_efficiency"
+    name: "fuel_efficiency"
+    description: "Fuel Efficiency - Optimize fuel consumption."
+    type: "maximization"
+    grader: "FuelTaskGrader"
+    grader_endpoint: "/task/fuel_grade"
+    score_range: [0, 1]
+
+metadata:
+  deterministic: true
+  supports_seeds: true
+  num_tasks: 3
+  task_scoring_type: "strict_open_interval"
+  score_bounds: "(0, 1)"

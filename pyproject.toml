@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "openenv-logistics"
+version = "1.0.0"
+description = "Autonomous Logistics Intelligence Environment for OpenEnv"
+authors = [
+    {name = "Aditya Gudipati"}
+]
+dependencies = [
+    "pydantic>=2.5.2",
+    "fastapi>=0.104.1",
+    "uvicorn>=0.24.0",
+    "httpx>=0.25.2",
+    "openai",
+    "openenv-core>=0.2.0"
+]
+
+[project.scripts]
+server = "server.app:main"
