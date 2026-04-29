@@ -217,4 +217,3 @@ The environment is served via FastAPI for real-time inference:
 - Mulpuru Saivasishta
 - Sushanth Reddy
 
-**Submitted for OpenEnv Hackathon — Round 1** (Scaler × Hugging Face × Meta)
