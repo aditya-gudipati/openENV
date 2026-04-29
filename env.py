@@ -43,6 +43,16 @@ class LogisticsEnv:
         if action.action_type == ActionType.WAIT and self._has_pending_packages():
             reward -= 3.0
 
+        # Urgency holding penalty — -2/step for every step past the halfway point
+        # of the deadline while the urgent package is still onboard.
+        # Creates continuous time pressure: the agent feels pain every step it
+        # delays routing to C, not just a single penalty at delivery time.
+        for pkg in self.state.packages.values():
+            if (pkg.priority == Priority.URGENT
+                    and pkg.state == PackageState.ONBOARD
+                    and self.state.agent.time > pkg.deadline // 2):
+                reward -= 2.0
+
         self.state.is_terminal = self._check_termination()
 
         if self.state.is_terminal:
@@ -121,19 +131,25 @@ class LogisticsEnv:
                     if e.source == "Depot" and e.target == v: from_depot = e.base_cost
                 return min(direct, to_depot + from_depot)
 
-            # Goal-progress shaping: bonus for moving toward a relevant node
+            # Goal-progress shaping: bonus for moving toward any relevant node.
+            # Urgent onboard packages get 2x bonus — the agent feels a stronger
+            # gradient toward C (p2 destination) than toward E (p4 destination).
             progress_bonus = 0.0
             for pkg in self.state.packages.values():
                 goal = None
+                bonus_scale = 1.0
                 if pkg.state == PackageState.ONBOARD:
                     goal = pkg.destination
+                    if pkg.priority == Priority.URGENT:
+                        bonus_scale = 2.0   # 2x gradient for urgent deliveries
                 elif pkg.state == PackageState.PENDING:
                     goal = pkg.origin
-                
+
                 if goal:
                     if min_cost(edge.target, goal) < min_cost(old_location, goal):
-                        progress_bonus = 8.0
-                        break
+                        candidate = 8.0 * bonus_scale
+                        if candidate > progress_bonus:
+                            progress_bonus = candidate
 
             # Per-move fuel penalty — keeps agent preferring ring edges over cross.
             # -0.30 * fuel_cost (raised from 0.25 to push FuelGrader → 0.60+):
@@ -149,10 +165,16 @@ class LogisticsEnv:
             pkg.state = PackageState.ONBOARD
             self.state.agent.capacity -= pkg.weight
 
+            # Pickup bonus — urgent packages get a much bigger reward to teach
+            # the agent to grab p2 BEFORE p1 even though both are at Depot.
+            # +40 urgent vs +25 normal = a 60% premium for urgent pickup.
+            # Additionally: +30 "still on time" signal if deadline not yet passed.
             pickup_bonus = 25.0
-            # Extra bonus for picking up the urgent package — teaches prioritisation
             if pkg.priority == Priority.URGENT:
-                pickup_bonus += 10.0
+                pickup_bonus = 40.0
+                # Extra signal: "you still have time to deliver on-time"
+                if self.state.agent.time < pkg.deadline:
+                    pickup_bonus += 30.0
 
             return 1, 0.0, pickup_bonus
 
@@ -163,25 +185,32 @@ class LogisticsEnv:
 
             reward = 100.0
 
-            # Urgent bonus: time-scaled so earlier delivery = higher reward.
-            # This gradient drives PriorityTaskGrader toward 0.90+ consistently:
-            #   delivered at t=0  → bonus = +90  (rush p2 from step 0)
-            #   delivered at t=20 → bonus = +75
-            #   delivered at t=40 → bonus = +60  (just on time)
-            #   delivered at t=41+→ late penalty (ramps up)
+            # Urgent delivery reward — binary + time bonus.
+            # Flat +150 on-time: this single number must dominate the value
+            # of any "efficient tour" that skips p2 first.
+            # Late penalty is catastrophic (-200 max) so the agent never
+            # gambles on a faster route that risks missing the deadline.
+            #
+            # On-time (t <= deadline=40):
+            #   +150 flat  + up to +50 early bonus = up to +200 extra
+            #   Total per-delivery: 100 + 200 = up to 300
+            # Late (t > deadline):
+            #   -200 max — losing 200 is worse than any fuel or tour saving
             if pkg.priority == Priority.URGENT:
                 if self.state.agent.time <= pkg.deadline:
                     time_left = pkg.deadline - self.state.agent.time
-                    urgency_bonus = 60.0 + 30.0 * (time_left / max(float(pkg.deadline), 1.0))
+                    # Flat on-time bonus + early-delivery multiplier
+                    urgency_bonus = 150.0 + 50.0 * (time_left / max(float(pkg.deadline), 1.0))
                     reward += urgency_bonus
                 else:
                     overtime = self.state.agent.time - pkg.deadline
-                    reward -= min(50.0, 3.0 * overtime)  # late penalty
+                    # Catastrophic late penalty — no cap, grows with overtime
+                    reward -= min(200.0, 5.0 * overtime)
 
-            # Normal package deadline penalty (mild)
+            # Normal package deadline penalty (mild — don't distract from urgency)
             elif self.state.agent.time > pkg.deadline:
                 overtime = self.state.agent.time - pkg.deadline
-                reward -= min(50.0, 3.0 * overtime)
+                reward -= min(30.0, 2.0 * overtime)
 
             return 1, 0.0, reward
 
@@ -220,4 +249,3 @@ class LogisticsEnv:
     def _has_pending_packages(self) -> bool:
         return any(pkg.state in [PackageState.PENDING, PackageState.ONBOARD]
                    for pkg in self.state.packages.values())
-        

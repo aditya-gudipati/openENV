@@ -80,7 +80,21 @@ class OpenENVGym(gym.Env):
                 return not any(p["state"] in ["pending", "onboard"] for p in s["packages"].values())
             return False
 
-        return np.array([valid(a, t) for a, t in ALL_ACTIONS], dtype=bool)
+        masks = np.array([valid(a, t) for a, t in ALL_ACTIONS], dtype=bool)
+
+        # Force-deliver: if the agent is AT the destination of an urgent onboard
+        # package, mask out all MOVE actions (indices 0-5).
+        # The agent MUST deliver now — it cannot walk away from C while holding p2.
+        # This fires only in the exact failure case, leaving normal routing unchanged.
+        loc = s["agent"]["location"]
+        for pid, pkg in s["packages"].items():
+            if (pkg["state"] == "onboard"
+                    and pkg["priority"] == "urgent"
+                    and pkg["destination"] == loc):
+                masks[:6] = False  # mask all 6 MOVE actions
+                break
+
+        return masks
 
     def _encode(self, s: dict) -> np.ndarray:
         obs = []
