@@ -10,13 +10,17 @@ WORKDIR /app
 # Copy deployment requirements securely matched to User
 COPY --chown=user requirements.txt .
 
-# Install dependencies deterministically
+# Install dependencies deterministically (includes ML libs for PPO)
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy source configuration
+# Copy source code
 COPY --chown=user *.py /app/
 COPY --chown=user server/ /app/server/
 COPY --chown=user openenv.yaml /app/openenv.yaml
+
+# Copy trained model artifacts
+COPY --chown=user best_model.zip /app/best_model.zip
+COPY --chown=user vecnormalize.pkl /app/vecnormalize.pkl
 
 # Expose validation mapping port strictly assigned universally by HF Spaces
 EXPOSE 7860
