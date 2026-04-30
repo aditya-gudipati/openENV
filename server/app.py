@@ -93,10 +93,7 @@ async def home():
 
             body {
                 background-color: var(--bg-dark);
-                background-image: url('/static/hero.png');
-                background-size: cover;
-                background-position: center;
-                background-attachment: fixed;
+                background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
                 color: white;
                 height: 100vh;
                 display: flex;
