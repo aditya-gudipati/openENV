@@ -19,8 +19,10 @@ from grader import DeliveryTaskGrader, PriorityTaskGrader, FuelTaskGrader, Servi
 
 app = FastAPI(title="OpenEnv Logistics Engine")
 
-# Static files mount removed to avoid HF startup errors
-# app.mount("/static", StaticFiles(directory=str(static_path)), name="static")
+# Mount static files
+static_path = Path(__file__).parent / "static"
+app.mount("/static", StaticFiles(directory=str(static_path)), name="static")
+
 
 
 
@@ -97,20 +99,42 @@ async def home():
                 align-items: center;
                 justify-content: center;
                 overflow: hidden;
-                background-image: radial-gradient(#cbd5e1 1px, transparent 1px);
-                background-size: 30px 30px;
+                position: relative;
+            }
+
+            body::before {
+                content: '';
+                position: absolute;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background-image: url('/static/bg.png');
+                background-size: cover;
+                background-position: center;
+                filter: blur(8px);
+                z-index: -1;
+                transform: scale(1.05);
             }
 
             .card {
-                background: white;
-                border-radius: 20px;
-                padding: 3rem;
-                box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-                max-width: 600px;
+                background: rgba(255, 255, 255, 0.9);
+                backdrop-filter: blur(10px);
+                border-radius: 24px;
+                padding: 4rem;
+                box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+                max-width: 650px;
                 width: 90%;
                 text-align: center;
-                border: 1px solid #e2e8f0;
+                border: 1px solid rgba(255, 255, 255, 0.3);
+                animation: fadeIn 0.8s ease-out;
             }
+
+            @keyframes fadeIn {
+                from { opacity: 0; transform: translateY(20px); }
+                to { opacity: 1; transform: translateY(0); }
+            }
+
 
             h1 {
                 font-size: 2.5rem;
