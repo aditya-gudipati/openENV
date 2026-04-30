@@ -19,9 +19,9 @@ from grader import DeliveryTaskGrader, PriorityTaskGrader, FuelTaskGrader, Servi
 
 app = FastAPI(title="OpenEnv Logistics Engine")
 
-# Mount static files
-static_path = Path(__file__).parent / "static"
-app.mount("/static", StaticFiles(directory=str(static_path)), name="static")
+# Static files mount removed to avoid HF startup errors
+# app.mount("/static", StaticFiles(directory=str(static_path)), name="static")
+
 
 
 # ---------------------------------------------------------------------------
@@ -74,14 +74,12 @@ async def home():
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>OpenEnv Logistics Engine</title>
-        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
         <style>
             :root {
                 --primary: #f39c12;
-                --secondary: #2980b9;
-                --bg-dark: #0f172a;
-                --glass: rgba(255, 255, 255, 0.05);
-                --glass-border: rgba(255, 255, 255, 0.1);
+                --text: #1e293b;
+                --bg: #f8fafc;
             }
             
             * {
@@ -92,84 +90,40 @@ async def home():
             }
 
             body {
-                background-color: var(--bg-dark);
-                background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
-                color: white;
+                background-color: var(--bg);
+                color: var(--text);
                 height: 100vh;
                 display: flex;
                 align-items: center;
                 justify-content: center;
                 overflow: hidden;
+                background-image: radial-gradient(#cbd5e1 1px, transparent 1px);
+                background-size: 30px 30px;
             }
 
-            body::before {
-                content: '';
-                position: absolute;
-                top: 0;
-                left: 0;
-                right: 0;
-                bottom: 0;
-                background: radial-gradient(circle at 50% 50%, rgba(15, 23, 42, 0.5) 0%, rgba(15, 23, 42, 0.9) 100%);
-                z-index: 0;
-            }
-
-            .container {
-                position: relative;
-                z-index: 1;
-                width: 90%;
-                max-width: 1000px;
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-                text-align: center;
-            }
-
-            .glass-card {
-                background: var(--glass);
-                backdrop-filter: blur(20px);
-                -webkit-backdrop-filter: blur(20px);
-                border: 1px solid var(--glass-border);
-                border-radius: 24px;
+            .card {
+                background: white;
+                border-radius: 20px;
                 padding: 3rem;
-                box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
-                animation: fadeIn 1s ease-out;
-            }
-
-            @keyframes fadeIn {
-                from { opacity: 0; transform: translateY(20px); }
-                to { opacity: 1; transform: translateY(0); }
+                box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+                max-width: 600px;
+                width: 90%;
+                text-align: center;
+                border: 1px solid #e2e8f0;
             }
 
             h1 {
-                font-size: 3.5rem;
-                font-weight: 800;
+                font-size: 2.5rem;
+                font-weight: 700;
                 margin-bottom: 1rem;
-                background: linear-gradient(135deg, #fff 0%, #cbd5e1 100%);
-                -webkit-background-clip: text;
-                -webkit-text-fill-color: transparent;
-                letter-spacing: -0.02em;
+                color: #0f172a;
             }
 
             p {
-                font-size: 1.125rem;
-                color: #94a3b8;
-                max-width: 600px;
+                font-size: 1.1rem;
+                color: #64748b;
                 line-height: 1.6;
-                margin-bottom: 2.5rem;
-            }
-
-            .badge {
-                display: inline-block;
-                padding: 0.5rem 1rem;
-                background: rgba(243, 156, 18, 0.1);
-                border: 1px solid rgba(243, 156, 18, 0.3);
-                color: var(--primary);
-                border-radius: 99px;
-                font-size: 0.875rem;
-                font-weight: 600;
-                margin-bottom: 1.5rem;
-                text-transform: uppercase;
-                letter-spacing: 0.05em;
+                margin-bottom: 2rem;
             }
 
             .btn-group {
@@ -179,92 +133,58 @@ async def home():
             }
 
             .btn {
-                padding: 0.75rem 2rem;
-                border-radius: 12px;
+                padding: 0.75rem 1.5rem;
+                border-radius: 8px;
                 font-weight: 600;
                 text-decoration: none;
-                transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                transition: all 0.2s;
                 font-size: 1rem;
             }
 
             .btn-primary {
                 background: var(--primary);
-                color: #000;
-                box-shadow: 0 4px 15px rgba(243, 156, 18, 0.3);
+                color: white;
             }
 
             .btn-primary:hover {
-                transform: translateY(-2px);
-                box-shadow: 0 8px 25px rgba(243, 156, 18, 0.4);
-                background: #f1c40f;
+                background: #e67e22;
+                transform: translateY(-1px);
             }
 
             .btn-secondary {
-                background: rgba(255, 255, 255, 0.1);
-                color: white;
-                border: 1px solid rgba(255, 255, 255, 0.1);
+                background: #f1f5f9;
+                color: #475569;
             }
 
             .btn-secondary:hover {
-                background: rgba(255, 255, 255, 0.2);
-                border-color: rgba(255, 255, 255, 0.3);
+                background: #e2e8f0;
             }
 
-            .features {
-                margin-top: 3rem;
-                display: grid;
-                grid-template-columns: repeat(3, 1fr);
-                gap: 2rem;
-                width: 100%;
-            }
-
-            .feature-item {
-                text-align: left;
-            }
-
-            .feature-item h3 {
-                font-size: 1rem;
-                margin-bottom: 0.5rem;
-                color: #fff;
-            }
-
-            .feature-item p {
+            .footer {
+                margin-top: 2rem;
                 font-size: 0.875rem;
-                margin-bottom: 0;
+                color: #94a3b8;
             }
         </style>
     </head>
     <body>
-        <div class="container">
-            <div class="glass-card">
-                <span class="badge">v1.0.0 Stable</span>
-                <h1>OpenEnv Logistics</h1>
-                <p>An advanced reinforcement learning environment for deterministic real-world constrained logistics simulations. Built for researchers and engineers.</p>
-                
-                <div class="btn-group">
-                    <a href="/docs" class="btn btn-primary">API Documentation</a>
-                    <a href="/metadata" class="btn btn-secondary">Environment Metadata</a>
-                </div>
+        <div class="card">
+            <h1>OpenEnv Logistics</h1>
+            <p>A deterministic environment for simulating and optimizing real-world delivery networks using Reinforcement Learning.</p>
+            
+            <div class="btn-group">
+                <a href="/docs" class="btn btn-primary">View API Docs</a>
+                <a href="/metadata" class="btn btn-secondary">Get Metadata</a>
+            </div>
 
-                <div class="features">
-                    <div class="feature-item">
-                        <h3>PPO Ready</h3>
-                        <p>Pre-trained MaskablePPO models integrated.</p>
-                    </div>
-                    <div class="feature-item">
-                        <h3>Multi-Task</h3>
-                        <p>4 distinct graders for comprehensive evaluation.</p>
-                    </div>
-                    <div class="feature-item">
-                        <h3>Stateless</h3>
-                        <p>RESTful API design for scalable inference.</p>
-                    </div>
-                </div>
+            <div class="footer">
+                Status: System Online • v1.0.0
             </div>
         </div>
     </body>
     </html>
     """
+
 
 @app.get("/tasks")
 
